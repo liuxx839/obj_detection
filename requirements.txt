@@ -19,3 +19,4 @@ torch
 torchvision
 mtcnn
 tensorflow
+deepface
