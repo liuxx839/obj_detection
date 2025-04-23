@@ -18,3 +18,4 @@ pillow
 torch
 torchvision
 mtcnn
+tensorflow
