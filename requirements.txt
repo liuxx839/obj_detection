@@ -20,3 +20,4 @@ torchvision
 mtcnn
 tensorflow
 deepface
+tf-keras
