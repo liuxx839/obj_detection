@@ -10,7 +10,6 @@ import uuid
 import time
 from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
-import faiss
 import torch
 from torchvision import models, transforms
 from groq import Groq
