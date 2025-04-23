@@ -21,8 +21,6 @@ from mtcnn import MTCNN
 from deepface import DeepFace
 
 
-os.environ["GROQ_API_KEY"] = "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"
-os.environ["GEMINI_API_KEY"] = "AIzaSyBRxiL38LfYdw5f6Ik6sq197_uHIt4_evU"
 
 # 设置页面标题
 st.set_page_config(page_title="物体检测与相似搜索工具", layout="wide")
