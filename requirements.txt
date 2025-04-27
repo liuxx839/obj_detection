@@ -21,3 +21,4 @@ mtcnn
 tensorflow
 deepface
 tf-keras
+face_recognition
