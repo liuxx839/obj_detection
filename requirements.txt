@@ -15,3 +15,4 @@ keras
 deepface
 tf-keras
 imutils
+sentence-transformers
