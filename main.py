@@ -1696,8 +1696,9 @@ def display_batch_analysis_summary():
         
         col1, col2 = st.columns(2)
         with col1:
-            similarity_threshold = st.slider("相似度阈值", 0.1, 0.9, 0.5, 0.1, 
-                                            help="较低的值会将更多图片归为同一场景/同一人物")
+            # similarity_threshold = st.slider("相似度阈值", 0.1, 0.9, 0.5, 0.1, 
+            #                                 help="较低的值会将更多图片归为同一场景/同一人物")
+            similarity_threshold = 0.5
         
         scene_summary = summarize_batch_images(similarity_threshold)
         face_summary = summarize_batch_faces(similarity_threshold)
