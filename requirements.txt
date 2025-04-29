@@ -10,5 +10,7 @@ torchvision>=0.15.0+cpu
 groq>=0.1
 openai>=1.0
 mtcnn>=0.1.0
+tensorflow==2.15.0  # Using an older version that's known to be stable
+tf-keras  # Adding the required tf-keras package
 deepface>=0.0.79
 imutils>=0.5.4
