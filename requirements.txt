@@ -10,6 +10,6 @@ torchvision
 groq
 openai
 mtcnn
-tensorflow==2.17.0  # Using an older version that's known to be stable
+tensorflow==2.15.0  # Using an older version that's known to be stable
 keras
 deepface
