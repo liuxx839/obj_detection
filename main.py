@@ -693,7 +693,8 @@ def get_image_hash(image_path):
         return None
 
 # 添加人脸聚类函数
-def face_clustering(input_folder, output_folder, detection_method="mtcnn", tolerance=0.6, min_cluster_size=3):
+def face_clustering(input_folder, output_folder, detection_method="mtcnn", tolerance=0.6, min_cluster_size=3,
+                  dim_reduction=True, n_components=50):
     """
     Cluster similar faces from a collection of images and organize them into folders
     
@@ -703,6 +704,8 @@ def face_clustering(input_folder, output_folder, detection_method="mtcnn", toler
     - detection_method: Ignored (always uses MTCNN)
     - tolerance: How strict the face matching should be (lower is stricter)
     - min_cluster_size: Minimum number of images needed to form a cluster
+    - dim_reduction: Whether to apply dimensionality reduction (default: True)
+    - n_components: Number of components for dimensionality reduction (default: 50)
     """
     # Create output directory if it doesn't exist
     if not os.path.exists(output_folder):
@@ -795,8 +798,27 @@ def face_clustering(input_folder, output_folder, detection_method="mtcnn", toler
         # Convert embeddings to numpy array
         data = np.array(known_embeddings)
         
+        # Apply dimensionality reduction if enabled
+        if dim_reduction and len(data) > n_components:
+            print(f"[INFO] Applying dimensionality reduction from {data.shape[1]} to {n_components} dimensions")
+            from sklearn.decomposition import PCA
+            
+            # Initialize and fit PCA
+            pca = PCA(n_components=n_components, random_state=42)
+            data = pca.fit_transform(data)
+            
+            # Calculate and display explained variance
+            explained_variance = sum(pca.explained_variance_ratio_) * 100
+            print(f"[INFO] Explained variance with {n_components} components: {explained_variance:.2f}%")
+        
+        # Normalize the data
+        print("[INFO] Normalizing feature vectors")
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler()
+        data = scaler.fit_transform(data)
+        
         # Perform DBSCAN clustering
-        clt = DBSCAN(metric="cosine", n_jobs=-1, eps=tolerance, min_samples=min_cluster_size)
+        clt = DBSCAN(metric="euclidean", n_jobs=-1, eps=tolerance, min_samples=min_cluster_size)
         clt.fit(data)
         
         # Get the number of unique clusters
@@ -1674,8 +1696,9 @@ def summarize_batch_faces(similarity_threshold=0.5):
         # 使用face_clustering函数进行人脸聚类
         face_clustering(temp_input_dir, temp_output_dir, 
                         detection_method="hog",
-                        tolerance=.6,
-                        min_cluster_size=1)  # 设置min_cluster_size为1以包含所有人脸
+                        tolerance=15,
+                        min_cluster_size=2,
+                        dim_reduction=False, n_components=3)  # 设置min_cluster_size为1以包含所有人脸
         
         # 计算聚类结果
         cluster_dirs = [d for d in os.listdir(temp_output_dir) 
