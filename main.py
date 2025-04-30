@@ -1697,7 +1697,7 @@ def summarize_batch_faces(similarity_threshold=0.5):
         face_clustering(temp_input_dir, temp_output_dir, 
                         detection_method="hog",
                         tolerance=15,
-                        min_cluster_size=2,
+                        min_cluster_size=1,
                         dim_reduction=False, n_components=3)  # 设置min_cluster_size为1以包含所有人脸
         
         # 计算聚类结果
