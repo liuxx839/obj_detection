@@ -576,7 +576,7 @@ def analyze_with_groq(image, api_key):
         base64_image = image_to_base64(image)
         
         response = client_vision.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="meta-llama/llama-4-maverick-17b-128e-instruct",
             messages=[
                 {
                     "role": "system",
@@ -626,8 +626,12 @@ def analyze_with_groq(image, api_key):
 是否正确识别会议必要设备（如投影仪、电脑、麦克风、白板、会议桌等）？
 识别设备：若有，列出具体设备名称；若无，标注 "未识别到会议设备"。
 
-## 翻拍照片识别
-图片是否为会议照片的翻拍（如对屏幕、纸质照片的二次拍摄，可能存在反光、变形等特征）？
+## 会议照片翻拍识别：图片是否为会议照片的翻拍（如对屏幕、纸质照片的二次拍摄）？判断依据包括：
+・摩尔纹：当拍摄显示屏或打印照片时，经常会出现干扰条纹，这是因为相机传感器与被拍摄的像素排列产生的干涉现象
+・反光和眩光：翻拍时常有闪光灯反射或环境光线造成的亮点
+・边框或相框：可能会看到原照片的边缘或相框
+・失真和角度问题：翻拍很难保持完美的垂直角度，可能会有透视失真
+・分辨率不一致：翻拍通常会降低图像质量，使细节模糊
 识别结果：是（翻拍照片）/否（非翻拍照片）/无法判断。
 
 ## 会议场所合规性
