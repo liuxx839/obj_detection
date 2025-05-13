@@ -1,5 +1,5 @@
 import streamlit as st
-# from ultralytics import YOLO
+from ultralytics import YOLO
 from ultralyticsplus import YOLO
 import cv2
 import numpy as np
@@ -180,7 +180,7 @@ def load_model(model_name):
 # 加载场景分类模型
 @st.cache_resource
 def load_scene_classifier():
-    # from ultralyticsplus import YOLO
+    from ultralyticsplus import YOLO
     
     # Explicitly use the torch load function with weights_only=False
     # This is already in your code but doesn't seem to be working as expected
