@@ -183,7 +183,7 @@ def load_scene_classifier():
     
     # Explicitly use the torch load function with weights_only=False
     # This is already in your code but doesn't seem to be working as expected
-    model = YOLO('keremberke/yolov8n-scene-classification',weights_only=False)
+    model = YOLO('keremberke/yolov8s-scene-classification')
     model.overrides['conf'] = 0.25
     return model
 
