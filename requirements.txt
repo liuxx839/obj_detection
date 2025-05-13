@@ -16,4 +16,4 @@ deepface
 tf-keras
 imutils
 sentence-transformers
-ultralyticsplus
+ultralyticsplus==0.0.21
