@@ -25,6 +25,7 @@ from datetime import datetime
 import hashlib
 import random
 import tempfile
+from ultralyticsplus import postprocess_classify_output
 
 
 # 设置页面标题
@@ -1358,6 +1359,27 @@ def display_similar_texts(similar_texts):
                 st.write(result['text'])
                 
     # 计算余弦相似度
+# 执行场景分类
+def classify_scene(image, scene_model):
+    # 转换为numpy数组并确保RGB格式
+    img = np.array(image)
+    if img.shape[-1] == 4:  # 检查是否为RGBA
+        img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+    
+    # 执行场景分类
+    results = scene_model.predict(img)
+    
+    # 处理分类结果
+    if results and len(results) > 0:
+        processed_result = postprocess_classify_output(scene_model, result=results[0])
+        top_class_name = processed_result['top_class_name']
+        top_class_conf = processed_result['top_conf']
+        
+        return {
+            'scene': top_class_name,
+            'confidence': top_class_conf
+        }
+    return None
 
 # 添加一个清除处理状态的函数
 def reset_processed_state():
@@ -2029,7 +2051,14 @@ try:
                             
                             # 转换回RGB
                             processed_img = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB) 
-                        
+                            
+                        # 如果启用了场景分类，执行场景分类
+                        scene_result = None
+                        if detect_scene:
+                            with st.spinner("正在进行场景分类..."):
+                                scene_classifier = load_scene_classifier()
+                                scene_result = classify_scene(image, scene_classifier)
+                                st.session_state.scene_result = scene_result
                         # 将最终结果保存到session_state
                         st.session_state.processed_img = processed_img
                         
@@ -2199,6 +2228,13 @@ try:
                 if not class_counts and not (detect_faces and st.session_state.detected_faces):
                     st.write("未检测到任何物体")
 
+            # 显示场景分类结果
+            if detect_scene and 'scene_result' in st.session_state and st.session_state.scene_result:
+                st.subheader("场景分类结果")
+                scene_result = st.session_state.scene_result
+                st.write(f"- 检测到的场景: {scene_result['scene']} (置信度: {scene_result['confidence']:.2f})")
+            elif detect_scene:
+                st.info("未检测到场景")
                 # 添加AI分析部分
                 st.subheader("AI综合分析")
                 
