@@ -59,7 +59,6 @@ invalid_items = [
     "potted plant",
     "bed",
     "toilet",
-    "tv",
     "microwave",
     "oven",
     "toaster",
