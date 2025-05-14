@@ -2287,6 +2287,13 @@ try:
                 if not class_counts and not (detect_faces and st.session_state.detected_faces):
                     st.write("未检测到任何物体")
                     
+                # 显示场景分类结果
+                st.subheader("场景分类结果")
+                if hasattr(st.session_state, 'scene_results') and st.session_state.scene_results:
+                    for scene, prob in st.session_state.scene_results:
+                        st.write(f"- {scene}: {prob*100:.2f}%")
+                else:
+                    st.info("未进行场景分类或分类失败")
                 # 新增：基于YOLO和场景分析的合规性话术
                 st.subheader("合规性初步判断")
                 person_count = class_counts.get('person', 0) if 'person' in class_names.values() else 0
