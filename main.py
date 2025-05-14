@@ -11,6 +11,7 @@ import time
 from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
 import torch
+import torch.nn as nn
 from torchvision import models, transforms
 from groq import Groq
 from openai import OpenAI
@@ -25,6 +26,7 @@ from datetime import datetime
 import hashlib
 import random
 import tempfile
+from invalid_obj import invalid_items, invalid_scenes
 
 
 # 设置页面标题
@@ -203,6 +205,96 @@ def get_transform():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
+# 新增：场景分类器类
+@st.cache_resource
+def load_scene_classifier():
+    class SceneClassifier:
+        def __init__(self):
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.model = models.resnet50(weights=None)
+            num_ftrs = self.model.fc.in_features
+            self.model.fc = nn.Linear(num_ftrs, 365)  # Places365 has 365 classes
+            
+            # 权重和类别文件路径
+            places365_weights = 'resnet50_places365.pth.tar'
+            categories_file = 'categories_places365.txt'
+            
+            # 自动下载权重文件
+            if not os.path.exists(places365_weights):
+                st.info(f"Places365模型权重文件 {places365_weights} 未找到，正在从 https://github.com/CSAILVision/places365 下载...")
+                try:
+                    import urllib.request
+                    url = "http://places2.csail.mit.edu/models_places365/resnet50_places365.pth.tar"
+                    urllib.request.urlretrieve(url, places365_weights)
+                    st.success(f"成功下载 Places365 权重文件到 {places365_weights}")
+                except Exception as e:
+                    st.warning(f"下载 Places365 权重文件失败: {str(e)}。场景分类将不可用。")
+                    self.model = None
+                    return
+            
+            # 自动下载类别文件
+            if not os.path.exists(categories_file):
+                st.info(f"Places365类别文件 {categories_file} 未找到，正在从 https://github.com/CSAILVision/places365 下载...")
+                try:
+                    import urllib.request
+                    url = "https://raw.githubusercontent.com/CSAILVision/places365/master/categories_places365.txt"
+                    urllib.request.urlretrieve(url, categories_file)
+                    st.success(f"成功下载 Places365 类别文件到 {categories_file}")
+                except Exception as e:
+                    st.warning(f"下载 Places365 类别文件失败: {str(e)}。场景分类将不可用。")
+                    self.model = None
+                    return
+            
+            # 加载Places365预训练模型
+            checkpoint = torch.load(places365_weights, map_location=self.device)
+            state_dict = {k.replace('module.', ''): v for k, v in checkpoint['state_dict'].items()}
+            self.model.load_state_dict(state_dict)
+            self.model = self.model.to(self.device)
+            self.model.eval()
+            
+            # 加载Places365场景分类标签
+            self.classes = []
+            with open(categories_file, 'r') as f:
+                for line in f:
+                    class_name = line.split()[0].split('/')[-1].replace('_', ' ')
+                    self.classes.append(class_name)
+            
+            # 图像预处理
+            self.preprocess = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+        
+        def predict(self, image, top_k=1):
+            if self.model is None:
+                return []
+            
+            try:
+                image = image.convert('RGB')
+                image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
+                
+                with torch.no_grad():
+                    outputs = self.model(image_tensor)
+                    probabilities = torch.nn.functional.softmax(outputs, dim=1)[0]
+                
+                top_probs, top_indices = torch.topk(probabilities, top_k)
+                
+                results = []
+                for prob, idx in zip(top_probs, top_indices):
+                    class_idx = idx.item()
+                    if class_idx < len(self.classes):
+                        results.append((self.classes[class_idx], prob.item()))
+                    else:
+                        results.append((f"未知类别 {class_idx}", prob.item()))
+                
+                return results
+            except Exception as e:
+                st.error(f"场景分类出错: {str(e)}")
+                return []
+    
+    return SceneClassifier()
 # 提取图像特征
 def extract_image_features(image, model, transform):
     # 预处理图像
@@ -1836,6 +1928,8 @@ try:
         feature_extractor = load_feature_extractor()
         transform = get_transform()
     
+    scene_classifier = load_scene_classifier()
+
     # 显示模型信息
     st.info(f"当前使用: {model_option}")
     
@@ -2072,6 +2166,11 @@ try:
                         
                         # 标记为已处理
                         st.session_state.processed = True
+                         # 执行场景分类
+                        with st.spinner("正在进行场景分类..."):
+                            scene_results = scene_classifier.predict(image, top_k=3)
+                            st.session_state.scene_results = scene_results
+                            
                         # 重置加强人脸检索状态
                         st.session_state.advanced_face_search_done = False
                 except Exception as e:
@@ -2187,7 +2286,38 @@ try:
                 
                 if not class_counts and not (detect_faces and st.session_state.detected_faces):
                     st.write("未检测到任何物体")
-
+                    
+                # 新增：基于YOLO和场景分析的合规性话术
+                st.subheader("合规性初步判断")
+                person_count = class_counts.get('person', 0) if 'person' in class_names.values() else 0
+                is_invalid_scene = False
+                invalid_item_detected = None
+                
+                # 检查场景是否为不合规场景
+                if hasattr(st.session_state, 'scene_results') and st.session_state.scene_results:
+                    # 检查前三个场景（最多取前三）
+                    for scene, prob in st.session_state.scene_results[:3]:
+                        if any(keyword in scene.lower() for keyword in invalid_scenes):
+                            is_invalid_scene = True
+                            break
+                
+                # 检查是否检测到不合规物体
+                for item in invalid_items:
+                    item_count = class_counts.get(item, 0) if item in class_names.values() else 0
+                    if item_count > 0:
+                        invalid_item_detected = item
+                        break
+                
+                # 判断合规性
+                if person_count == 0:
+                    st.error("不合规：未检测到任何人物，会议场景需至少包含1人。")
+                elif is_invalid_scene:
+                    st.error("不合规：检测到不合规场景，会议场景需为合规室内环境。")
+                elif invalid_item_detected:
+                    st.error(f"不合规：检测到 {invalid_item_detected}，可能涉及不合规物品，会议场景中禁止出现此类物品。")
+                else:
+                    st.success("合规：检测到人物，场景为合规室内环境，且未检测到不合规物品，初步符合会议场景要求。")
+                    
                 # 添加AI分析部分
                 st.subheader("AI综合分析")
                 
