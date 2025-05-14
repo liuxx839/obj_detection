@@ -2316,12 +2316,16 @@ try:
                         break
                 
                 # 判断合规性
+                noncompliance_reasons = []
                 if person_count == 0:
-                    st.error("不合规：未检测到任何人物，会议场景需至少包含1人。")
-                elif is_invalid_scene:
-                    st.error("不合规：检测到不合规场景，会议场景需为合规室内环境。")
-                elif invalid_item_detected:
-                    st.error(f"不合规：检测到 {invalid_item_detected}，可能涉及不合规物品，会议场景中禁止出现此类物品。")
+                    noncompliance_reasons.append("未检测到任何人物，会议场景需至少包含1人")
+                if is_invalid_scene:
+                    noncompliance_reasons.append("检测到不合规场景，会议场景需为合规室内环境")
+                if invalid_item_detected:
+                    noncompliance_reasons.append(f"检测到 {invalid_item_detected}，可能涉及不合规物品，会议场景中禁止出现此类物品")
+                
+                if noncompliance_reasons:
+                    st.error(f"不合规：{'；'.join(noncompliance_reasons)}。")
                 else:
                     st.success("合规：检测到人物，场景为合规室内环境，且未检测到不合规物品，初步符合会议场景要求。")
                     
