@@ -2,7 +2,7 @@ import streamlit as st
 from ultralytics import YOLO
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image,ImageFile
 import io
 import os
 import pickle
@@ -27,6 +27,10 @@ import hashlib
 import random
 import tempfile
 from invalid_obj import invalid_items, invalid_scenes
+
+
+# Enable loading of truncated images
+ImageFile.LOAD_TRUNCATED_IMAGES = True  # Allow PIL to process truncated images
 
 
 # 设置页面标题
